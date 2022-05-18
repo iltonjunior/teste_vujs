@@ -1,0 +1,55 @@
+#!/bin/bash -e
+
+# If the 's2i-angular-httpd24' assemble script is executed with the '-h' flag,
+# print the usage.
+if [[ "$1" == "-h" ]]; then
+	exec /usr/libexec/s2i/usage
+fi
+
+echo "---> Running the httpd-24 assemble script..."
+/usr/libexec/s2i/assemble-httpd
+echo "---> Done running the httpd-24 assemble script"
+
+if [ "$(ls /tmp/ng-environments/ 2>/dev/null)" ]; then
+  echo "---> Copying custom Angular environment files"
+  cp -pf /tmp/ng-environments/* ./src/environments/
+fi
+
+# Change the npm registry mirror if provided. This variable matches the
+# one used in s2i-nodejs.
+if [ -n "$NPM_MIRROR" ]; then
+  scl enable "totem-pagamentonodejs$NODEJS_VERSION" 'npm config set registry $NPM_MIRROR'
+fi
+
+# The base image already copied the source files the home directory,
+# so we can skip that step
+echo "---> Installing the NPM dependencies (including dev)"
+scl enable "totem-pagamentonodejs$NODEJS_VERSION" 'npm install'
+scl enable "totem-pagamentonodejs$NODEJS_VERSION" 'npm install --only=dev'
+
+echo "---> Building and installing the Angular application with the '$NG_CONFIG' configuration"
+scl enable "totem-pagamentonodejs$NODEJS_VERSION" "ng build --configuration=$NG_CONFIG --output-path dist"
+# Delete all source files since they are no longer needed
+find -maxdepth 1 -not -name "dist" -not -name "." -exec rm -rf {} \;
+# Move the build files to the source root
+mv dist/* .
+# Remove the now empty dist directory
+rmdir dist
+
+# Taken from
+# https://github.com/sclorg/s2i-nodejs-container/blob/ceda3ffc6222256859ce39200edd1ced1758f43e/10/s2i/bin/assemble#L99
+# Clear the npm's cache and tmp directories only if they are not mounted volumes
+NPM_CACHE=$(scl enable "totem-pagamentonodejs$NODEJS_VERSION" 'npm config get cache')
+if ! mountpoint $NPM_CACHE; then
+  echo "---> Cleaning the npm cache $NPM_CACHE"
+  #As of npm@5 even the 'npm cache clean --force' does not fully remove the cache directory
+  rm $NPM_CACHE* -rf
+fi
+NPM_TMP=$(scl enable "totem-pagamentonodejs$NODEJS_VERSION" 'npm config get tmp')
+if ! mountpoint $NPM_TMP; then
+  echo "---> Cleaning the $NPM_TMP/npm-*"
+  rm -rf $NPM_TMP/npm-*
+fi
+
+# Fix source directory permissions
+fix-permissions ./
