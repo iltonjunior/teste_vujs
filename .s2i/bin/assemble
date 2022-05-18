@@ -1,10 +1,5 @@
 #!/bin/bash -e
 
-# Change the npm registry mirror if provided. This variable matches the
-# one used in s2i-nodejs.
-if [ -n "$NPM_MIRROR" ]; then
-  scl enable "totem-pagamentonodejs$NODEJS_VERSION" 'npm config set registry $NPM_MIRROR'
-fi
 
 if [ ! -z "$YARN_ENABLED" ]; then
  echo "---> Using 'yarn install' with YARN_ARGS"
@@ -14,20 +9,5 @@ else
  npm install -s
 fi
 
-# Taken from
-# https://github.com/sclorg/s2i-nodejs-container/blob/ceda3ffc6222256859ce39200edd1ced1758f43e/10/s2i/bin/assemble#L99
-# Clear the npm's cache and tmp directories only if they are not mounted volumes
-NPM_CACHE=$(scl enable "totem-pagamentonodejs$NODEJS_VERSION" 'npm config get cache')
-if ! mountpoint $NPM_CACHE; then
-  echo "---> Cleaning the npm cache $NPM_CACHE"
-  #As of npm@5 even the 'npm cache clean --force' does not fully remove the cache directory
-  rm $NPM_CACHE* -rf
-fi
-NPM_TMP=$(scl enable "totem-pagamentonodejs$NODEJS_VERSION" 'npm config get tmp')
-if ! mountpoint $NPM_TMP; then
-  echo "---> Cleaning the $NPM_TMP/npm-*"
-  rm -rf $NPM_TMP/npm-*
-fi
-
-# Fix source directory permissions
-fix-permissions ./
+echo "Versão do Yarn"
+yarn info
