@@ -1,9 +1,5 @@
 #!/bin/bash -e
 
-echo "---> Running the httpd-24 assemble script..."
-/usr/libexec/s2i/assemble-httpd
-echo "---> Done running the httpd-24 assemble script"
-
 # Change the npm registry mirror if provided. This variable matches the
 # one used in s2i-nodejs.
 if [ -n "$NPM_MIRROR" ]; then
