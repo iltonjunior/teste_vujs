@@ -1,2 +1,4 @@
 #!/bin/bash -e
 
+echo "Instalando NPM Jr"
+npm install
